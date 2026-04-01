@@ -81,6 +81,7 @@ async function handleAuth(body, env) {
   const tokens = await tokenRes.json();
 
   if (!tokens.refresh_token) {
+    console.error('No refresh token in response:', JSON.stringify(tokens));
     return json({ error: 'no_refresh_token' }, 502, env);
   }
 
@@ -89,6 +90,7 @@ async function handleAuth(body, env) {
     headers: { Authorization: `Bearer ${tokens.access_token}` },
   });
   if (!userRes.ok) {
+    console.error('Userinfo failed:', userRes.status, await userRes.text());
     return json({ error: 'userinfo_failed' }, 502, env);
   }
   const user = await userRes.json();

@@ -7,12 +7,15 @@ todo-pwa/
 ├── index.html      # Shell: <head>, fonty, meta tagy, HTML struktura (127 řádků)
 ├── app.css         # Všechny styly: CSS proměnné, témata, komponenty (181 řádků)
 ├── app.js          # Veškerá logika: data, render, swipe, PTR, animace (221 řádků)
-├── sw.js           # Service Worker: cache (ukoly-v3), offline, CHECK_UPDATE zprávy
+├── sw.js           # Service Worker: cache (ukoly-1.3.0), offline, CHECK_UPDATE zprávy
 ├── manifest.json   # PWA manifest: název, ikony, shortcuts
 ├── CLAUDE.md       # Tento soubor
-└── icons/
-    ├── icon-192.png
-    └── icon-512.png
+├── icons/
+│   ├── icon-192.png
+│   └── icon-512.png
+└── worker/
+    ├── worker.js       # Cloudflare Worker: OAuth proxy pro Google Drive
+    └── wrangler.toml   # Konfigurace Wrangler (KV binding, vars)
 ```
 
 ## Datový model
@@ -96,7 +99,38 @@ Po 320ms (animace sheetu) odstraní `readonly` – pole jsou tappable ale kláve
 
 Stačí **statický hosting** (Netlify, Vercel, GitHub Pages).  
 PWA vyžaduje HTTPS nebo localhost pro SW a notifikace.  
-Při deployi aktualizuj verzi cache v `sw.js`: `const CACHE = 'ukoly-vX'`.
+Při deployi aktualizuj verzi cache v `sw.js`: `const CACHE = 'ukoly-X.Y.Z'` (semver).
+
+## Cloudflare Worker – Google Drive OAuth proxy
+
+Worker běží na `https://ukoly-auth.icx-cz.workers.dev` a obstarává OAuth tok místo frontend JS.
+
+### Endpointy
+| Endpoint | Co dělá |
+|----------|---------|
+| `POST /auth` | Vymění PKCE `code` za session (uloží refresh token do KV) |
+| `POST /refresh` | Vrátí nový access token pomocí `session_id` |
+| `POST /logout` | Smaže session a refresh token z KV |
+
+### Proměnné a secrets
+- `wrangler.toml`: `GOOGLE_CLIENT_ID`, `ALLOWED_ORIGIN`, KV binding `TOKENS`
+- secret: `GOOGLE_CLIENT_SECRET` (nastaven přes `wrangler secret put GOOGLE_CLIENT_SECRET`)
+
+### Wrangler příkazy
+```bash
+cd worker
+wrangler kv namespace create TOKENS   # vytvoří KV (id doplnit do wrangler.toml)
+wrangler secret put GOOGLE_CLIENT_SECRET
+wrangler deploy
+wrangler tail                          # live logy
+```
+
+### Známé gotchy
+- Wrangler v3+: `wrangler kv namespace create` (mezera, ne `kv:namespace`)
+- OAuth scope musí obsahovat `openid` jinak `/userinfo` vrátí 401 (`Invalid Credentials`)
+- PKCE verifier ukládat do `localStorage`, ne `sessionStorage` – při OAuth redirectu se může otevřít nový kontext (PWA standalone) kde `sessionStorage` není dostupná
+- Google Cloud Console → Authorized redirect URIs musí mít přesně `https://todo.icx.cz/` (s lomítkem)
+- Po prvním deployi Wrangler interaktivně zaregistruje `workers.dev` subdoménu
 
 ## Časté chyby při úpravách
 

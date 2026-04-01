@@ -35,11 +35,7 @@
     <div class="header-top">
       <span class="logo">Úkoly</span>
       <div class="header-right">
-        <span class="stats" id="stats">0 zbývá</span>
-        <button class="sync-btn" id="sync-btn" data-state="idle" onclick="handleSyncBtn()" title="Google Drive záloha">
-          <span class="sync-label">drive</span>
-        </button>
-        <button class="theme-toggle" id="theme-toggle">☀</button>
+        <button class="menu-btn" id="menu-btn" onclick="openMenu()">⋯</button>
       </div>
     </div>
     <div class="tabs">
@@ -83,17 +79,7 @@
 
   <div class="bottom-bar">
     <button class="clear-done" id="clear-done">Smazat hotové</button>
-    <div class="backup-btns">
-      <button class="backup-btn" onclick="exportTasks()" title="Stáhnout zálohu">záloha ↓</button>
-      <button class="backup-btn" onclick="importTasks()" title="Obnovit ze zálohy">obnovit ↑</button>
-    </div>
-    <button class="notif-btn" id="notif-btn">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-      Notifikace
-    </button>
+    <span class="stats" id="stats">0 zbývá</span>
   </div>
 
 </div><!-- /#app -->
@@ -157,6 +143,39 @@
         <button class="btn-secondary" onclick="goStep1()">← Zpět</button>
         <button class="btn-primary" id="step2-confirm" disabled onclick="confirmGuide()">Potvrdit den</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Menu sheet -->
+<div class="sheet-overlay" id="menu-modal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Nastavení</div>
+    <div class="menu-body">
+      <button class="menu-item" id="sync-btn" data-state="idle" onclick="handleSyncBtn()">
+        <span class="menu-item-label">Google Drive</span>
+        <span class="sync-label">drive</span>
+      </button>
+      <button class="menu-item" onclick="applyTheme(theme==='dark'?'light':'dark')">
+        <span class="menu-item-label">Téma</span>
+        <span id="theme-icon">☀</span>
+      </button>
+      <button class="menu-item" onclick="exportTasks(); closeMenu()">
+        <span class="menu-item-label">Záloha</span>
+        <span>↓</span>
+      </button>
+      <button class="menu-item" onclick="importTasks(); closeMenu()">
+        <span class="menu-item-label">Obnovit ze zálohy</span>
+        <span>↑</span>
+      </button>
+      <button class="menu-item" id="notif-btn">
+        <span class="menu-item-label">Notifikace</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+      </button>
     </div>
   </div>
 </div>

@@ -19,12 +19,15 @@ var theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-
 function applyTheme(t) {
   theme = t;
   document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('theme-toggle').textContent = t === 'dark' ? '\u2600' : '\u263e';
+  document.getElementById('theme-icon').textContent = t === 'dark' ? '\u2600' : '\u263e';
   document.getElementById('theme-meta').setAttribute('content', t === 'dark' ? '#0f0f0f' : '#f5f3ef');
   localStorage.setItem('theme', t);
 }
 applyTheme(theme);
-document.getElementById('theme-toggle').addEventListener('click', function() { applyTheme(theme === 'dark' ? 'light' : 'dark'); });
+
+function openMenu() { document.getElementById('menu-modal').classList.add('open'); }
+function closeMenu() { document.getElementById('menu-modal').classList.remove('open'); }
+document.getElementById('menu-modal').addEventListener('click', function(e) { if (e.target === this) closeMenu(); });
 
 /* PULL TO REFRESH */
 (function() {
@@ -591,7 +594,7 @@ document.getElementById('dismiss-banner').addEventListener('click', function(){ 
 
 /* GOOGLE DRIVE SYNC – Authorization Code + PKCE přes Cloudflare Worker */
 var GOOGLE_CLIENT_ID = '477620373464-1apai7eth2sftqqtak88vau4tg5fnb0o.apps.googleusercontent.com';
-var WORKER_URL = 'https://ukoly-auth.DOPLŇ_SUBDOMAIN.workers.dev'; // po deployi sem doplň URL
+var WORKER_URL = 'https://ukoly-auth.icx-cz.workers.dev';
 var driveToken = null;
 var driveSessionId = localStorage.getItem('gdrive-session') || null;
 var driveFileId = localStorage.getItem('gdrive-file-id') || null;
@@ -629,13 +632,13 @@ async function generateCodeChallenge(verifier) {
 async function signInDrive() {
   var verifier = generateCodeVerifier();
   var challenge = await generateCodeChallenge(verifier);
-  sessionStorage.setItem('pkce_verifier', verifier);
+  localStorage.setItem('pkce_verifier', verifier);
 
   var params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
     redirect_uri: location.origin + '/',
     response_type: 'code',
-    scope: 'https://www.googleapis.com/auth/drive.appdata',
+    scope: 'openid https://www.googleapis.com/auth/drive.appdata',
     code_challenge: challenge,
     code_challenge_method: 'S256',
     access_type: 'offline',
@@ -669,8 +672,8 @@ async function checkOAuthCallback() {
   if (!code) return false;
 
   history.replaceState({}, '', location.pathname);
-  var verifier = sessionStorage.getItem('pkce_verifier');
-  sessionStorage.removeItem('pkce_verifier');
+  var verifier = localStorage.getItem('pkce_verifier');
+  localStorage.removeItem('pkce_verifier');
   if (!verifier) { setSyncState('error'); return true; }
 
   setSyncState('syncing');
@@ -680,7 +683,7 @@ async function checkOAuthCallback() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: code, code_verifier: verifier, redirect_uri: location.origin + '/' })
     });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) { var errBody = await r.text(); console.error('Worker /auth error:', r.status, errBody); throw new Error('HTTP ' + r.status); }
     var data = await r.json();
     if (data.error) throw new Error(data.error);
     driveToken = data.access_token;

@@ -9,4 +9,4 @@ ALLOWED_ORIGIN = "https://todo.icx.cz"
 # Po spuštění `wrangler kv:namespace create TOKENS` doplň id:
 [[kv_namespaces]]
 binding = "TOKENS"
-id = "DOPLŇ_KV_NAMESPACE_ID"
+id = "599b7e74a43d49129034661167e687bf"
