@@ -47,8 +47,8 @@ Denní výběr je v `localStorage('daily')`:
 | Funkce | Co dělá |
 |--------|---------|
 | `render()` | Volá renderDaily() + renderTasks() |
-| `renderDaily()` | No.1 karta + Top3 chipy nahoře |
-| `renderTasks()` | Seznam ostatních úkolů + initSwipe() |
+| `renderDaily()` | No.1 karta + top3-card řádky + section divider |
+| `renderTasks()` | Seznam ostatních úkolů + initSwipe() + initDrag() |
 | `initSwipe()` | Swipe-left-to-delete na každém .task-wrap |
 | `openEdit(id)` | Otevře edit sheet, readonly trick proti autofocusu |
 | `saveEdit()` | Uloží změny z edit sheetu |
@@ -60,12 +60,36 @@ Denní výběr je v `localStorage('daily')`:
 | `confirmGuide()` | Uloží daily výběr |
 | `addTask()` | Přidá nový úkol z formuláře |
 | `priorityScore(t)` | Skóre pro řazení v průvodci (priorita + blízkost termínu) |
+| `openMenu()` / `closeMenu()` | Otevře/zavře nastavení sheet |
+| `applyTheme(t)` | Přepne téma, aktualizuje `#theme-icon` a meta tag |
+
+## UI layout
+
+### Hlavička
+`Úkoly` logo | stats (přesunuto do patičky) | `⋯` menu tlačítko
+
+### Formulář pro přidání úkolu
+- Textarea + ADD button
+- Jeden řádek: `.date-wrap` (📅 + input[type=date]) | `.meta-input` (priorita) | `.detail-toggle` (+ detail chip)
+- Skrytá textarea `#detail-input` (zobrazí se po kliknutí na + detail)
+
+### Denní sekce (renderDaily)
+1. `.no1-card` – zlatá, výrazná, badge „No. 1", kolečko pro odškrtnutí
+2. `.top3-card` × 2 – full-width, šedé, číslo + text + kolečko (méně výrazné)
+3. `.section-divider` – „Ostatní úkoly"
+
+### Patička
+`Smazat hotové` | `X zbývá` (stats)
+
+### Menu sheet (`#menu-modal`, otevře se přes `⋯`)
+Google Drive | Téma | Záloha | Obnovit | Notifikace | `v1.5.0`
 
 ## Témata (světlé/tmavé)
 
-Přepínač v headeru, uloženo v `localStorage('theme')`.  
+Přepínač v menu sheetu, uloženo v `localStorage('theme')`.  
 Respektuje systémové `prefers-color-scheme` jako výchozí.  
-CSS proměnné v `app.css` – sekce `:root, [data-theme="dark"]` a `[data-theme="light"]`.
+CSS proměnné v `app.css` – sekce `:root, [data-theme="dark"]` a `[data-theme="light"]`.  
+`applyTheme()` aktualizuje `#theme-icon` span (nikoliv `#theme-toggle` – ten neexistuje).
 
 ## Pull-to-refresh
 
@@ -137,6 +161,9 @@ wrangler tail                          # live logy
 ## Časté chyby při úpravách
 
 - Při přidání nového souboru ho přidej i do `ASSETS` v `sw.js`
-- Po změně `sw.js` zvedni číslo verze CACHE, jinak se SW neaktualizuje
+- Při každé změně app souborů zvedni verzi na dvou místech: `sw.js` + `APP_VERSION` v `app.js`
 - `initSwipe()` se musí volat po každém re-renderu (volá ho `renderTasks()`)
 - `daily.top3` může obsahovat ID smazaných úkolů – vždy filtruj `.filter(Boolean)`
+- `toggleWithAnim(el, id)` – `el` je přímo button element (ne null), aby animace fungovaly
+- Téma se ovládá přes `applyTheme()`, ne přímou manipulací s `#theme-toggle` (ten neexistuje)
+- `#menu-version` se plní z `APP_VERSION` v app.js – neupravovat v HTML
