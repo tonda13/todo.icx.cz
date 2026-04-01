@@ -18,8 +18,8 @@ self.addEventListener('activate', e => {
 // Network-first s fallbackem na cache
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  // Google API requesty nekešujeme
-  if (e.request.url.includes('googleapis.com') || e.request.url.includes('accounts.google.com')) return;
+  // Google API a Worker requesty nekešujeme
+  if (e.request.url.includes('googleapis.com') || e.request.url.includes('accounts.google.com') || e.request.url.includes('workers.dev')) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {

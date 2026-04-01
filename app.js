@@ -589,11 +589,13 @@ window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); 
 document.getElementById('install-btn').addEventListener('click', function(){ if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;document.getElementById('install-banner').classList.remove('show');} });
 document.getElementById('dismiss-banner').addEventListener('click', function(){ document.getElementById('install-banner').classList.remove('show'); });
 
-/* GOOGLE DRIVE SYNC */
-var GOOGLE_CLIENT_ID = '477620373464-1apai7eth2sftqqtak88vau4tg5fnb0o.apps.googleusercontent.com'; // → Google Cloud Console → APIs & Services → Credentials
+/* GOOGLE DRIVE SYNC – Authorization Code + PKCE přes Cloudflare Worker */
+var GOOGLE_CLIENT_ID = '477620373464-1apai7eth2sftqqtak88vau4tg5fnb0o.apps.googleusercontent.com';
+var WORKER_URL = 'https://ukoly-auth.DOPLŇ_SUBDOMAIN.workers.dev'; // po deployi sem doplň URL
 var driveToken = null;
+var driveSessionId = localStorage.getItem('gdrive-session') || null;
 var driveFileId = localStorage.getItem('gdrive-file-id') || null;
-var syncTimer = null, tokenClient = null;
+var syncTimer = null;
 
 function setSyncState(s) {
   var btn = document.getElementById('sync-btn');
@@ -608,38 +610,139 @@ function handleSyncBtn() {
   else if (confirm('Odhlásit z Google Drive?')) signOutDrive();
 }
 
-function signInDrive() {
-  if (!tokenClient) { alert('Google API se ještě načítá, zkus za chvíli.'); return; }
-  var wasSignedIn = !!localStorage.getItem('gdrive-signed-in');
-  tokenClient.requestAccessToken({ prompt: wasSignedIn ? '' : 'select_account' });
+/* PKCE helpers */
+function generateCodeVerifier() {
+  var arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return btoa(String.fromCharCode.apply(null, arr))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+async function generateCodeChallenge(verifier) {
+  var data = new TextEncoder().encode(verifier);
+  var digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+/* Přesměruje uživatele na Google přihlášení */
+async function signInDrive() {
+  var verifier = generateCodeVerifier();
+  var challenge = await generateCodeChallenge(verifier);
+  sessionStorage.setItem('pkce_verifier', verifier);
+
+  var params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: location.origin + '/',
+    response_type: 'code',
+    scope: 'https://www.googleapis.com/auth/drive.appdata',
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    access_type: 'offline',
+    prompt: 'consent',
+  });
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
 }
 
 function signOutDrive() {
-  if (driveToken) google.accounts.oauth2.revoke(driveToken, function(){});
+  if (driveSessionId) {
+    fetch(WORKER_URL + '/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: driveSessionId })
+    }).catch(function(){});
+  }
   driveToken = null;
+  driveSessionId = null;
   localStorage.removeItem('gdrive-signed-in');
+  localStorage.removeItem('gdrive-session');
   setSyncState('idle');
 }
 
-function onTokenResponse(resp) {
-  if (resp.error) {
-    setSyncState(localStorage.getItem('gdrive-signed-in') ? 'error' : 'idle');
-    return;
+/* Zpracuje ?code= po návratu z Google */
+async function checkOAuthCallback() {
+  var params = new URLSearchParams(location.search);
+  var code = params.get('code');
+  var error = params.get('error');
+
+  if (error) { history.replaceState({}, '', location.pathname); setSyncState('idle'); return true; }
+  if (!code) return false;
+
+  history.replaceState({}, '', location.pathname);
+  var verifier = sessionStorage.getItem('pkce_verifier');
+  sessionStorage.removeItem('pkce_verifier');
+  if (!verifier) { setSyncState('error'); return true; }
+
+  setSyncState('syncing');
+  try {
+    var r = await fetch(WORKER_URL + '/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code, code_verifier: verifier, redirect_uri: location.origin + '/' })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
+    if (data.error) throw new Error(data.error);
+    driveToken = data.access_token;
+    driveSessionId = data.session_id;
+    localStorage.setItem('gdrive-session', driveSessionId);
+    localStorage.setItem('gdrive-signed-in', '1');
+    scheduleTokenRefresh(data.expires_in);
+    loadFromDrive();
+  } catch(e) {
+    console.error('OAuth callback:', e);
+    setSyncState('error');
   }
-  driveToken = resp.access_token;
-  localStorage.setItem('gdrive-signed-in', '1');
-  scheduleTokenRefresh();
-  loadFromDrive();
+  return true;
 }
 
-function scheduleTokenRefresh() {
-  setTimeout(function() {
-    if (localStorage.getItem('gdrive-signed-in') && tokenClient) {
-      tokenClient.requestAccessToken({ prompt: '' });
+/* Získá nový access token přes Worker (bez interakce uživatele) */
+async function refreshDriveToken() {
+  if (!driveSessionId) { setSyncState('reconnect'); return false; }
+  if (!navigator.onLine) { setSyncState('error'); return false; }
+  try {
+    var r = await fetch(WORKER_URL + '/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: driveSessionId })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
+    if (data.error) throw new Error(data.error);
+    driveToken = data.access_token;
+    scheduleTokenRefresh(data.expires_in);
+    return true;
+  } catch(e) {
+    console.error('Token refresh:', e);
+    driveToken = null;
+    // session expirovala → je potřeba nové přihlášení
+    if (e.message === 'HTTP 401') {
+      localStorage.removeItem('gdrive-session');
+      localStorage.removeItem('gdrive-signed-in');
+      driveSessionId = null;
+      setSyncState('idle');
+    } else {
+      setSyncState('reconnect');
     }
-  }, 55 * 60 * 1000);
+    return false;
+  }
 }
 
+function scheduleTokenRefresh(expiresIn) {
+  var delay = Math.max(((expiresIn || 3600) - 300), 60) * 1000; // 5 minut před expirací
+  setTimeout(function() {
+    refreshDriveToken().then(function(ok) { if (ok) setSyncState('ok'); });
+  }, delay);
+}
+
+async function initGoogleDrive() {
+  if (!driveSessionId) return;
+  setSyncState('syncing');
+  var ok = await refreshDriveToken();
+  if (ok) loadFromDrive();
+}
+
+/* Drive API volání */
 async function driveReq(method, url, body) {
   var headers = { 'Authorization': 'Bearer ' + driveToken };
   var opts = { method: method, headers: headers };
@@ -648,7 +751,7 @@ async function driveReq(method, url, body) {
     opts.body = JSON.stringify(body);
   }
   var r = await fetch(url, opts);
-  if (r.status === 401) { driveToken = null; setSyncState('idle'); throw new Error('auth'); }
+  if (r.status === 401) { driveToken = null; setSyncState('reconnect'); throw new Error('auth'); }
   if (!r.ok) throw new Error('HTTP ' + r.status);
   var ct = r.headers.get('content-type') || '';
   return ct.includes('json') ? r.json() : null;
@@ -672,14 +775,14 @@ async function loadFromDrive() {
   try {
     if (!driveFileId && !(await findDriveFile())) {
       setSyncState('ok');
-      scheduleDriveSync(); // první sync – nahraj lokální data
+      scheduleDriveSync();
       return;
     }
     var r = await fetch(
       'https://www.googleapis.com/drive/v3/files/' + driveFileId + '?alt=media',
       { headers: { 'Authorization': 'Bearer ' + driveToken } }
     );
-    if (r.status === 401) { driveToken = null; setSyncState('idle'); return; }
+    if (r.status === 401) { driveToken = null; setSyncState('reconnect'); return; }
     if (r.status === 404) { driveFileId = null; localStorage.removeItem('gdrive-file-id'); setSyncState('ok'); scheduleDriveSync(); return; }
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var data = await r.json();
@@ -691,7 +794,7 @@ async function loadFromDrive() {
       localStorage.setItem('tasks', JSON.stringify(tasks));
       render();
     } else {
-      scheduleDriveSync(); // lokální data jsou novější – nahraj je
+      scheduleDriveSync();
     }
     setSyncState('ok');
   } catch(e) {
@@ -735,20 +838,6 @@ function scheduleDriveSync() {
   if (syncTimer) clearTimeout(syncTimer);
   syncTimer = setTimeout(syncToDrive, 4000);
 }
-
-function initGoogleDrive() {
-  if (!window.google || !window.google.accounts) return;
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CLIENT_ID,
-    scope: 'https://www.googleapis.com/auth/drive.appdata',
-    callback: onTokenResponse
-  });
-  if (localStorage.getItem('gdrive-signed-in')) {
-    setSyncState('reconnect');
-  }
-}
-
-window.onGoogleLibraryLoad = initGoogleDrive;
 
 /* EXPORT / IMPORT */
 function exportTasks() {
@@ -796,3 +885,4 @@ if (!isDailyFresh() && tasks.filter(function(t){return !t.done;}).length >= 2) {
 }
 if (new URLSearchParams(location.search).get('action') === 'add') input.focus();
 render();
+checkOAuthCallback().then(function(wasCallback) { if (!wasCallback) initGoogleDrive(); });
