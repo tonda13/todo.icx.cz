@@ -510,6 +510,7 @@ detTog.addEventListener('click', function(){
   detVis = !detVis;
   detIn.classList.toggle('visible', detVis);
   detTog.textContent = detVis ? '\u2212 detail' : '+ detail';
+  detTog.classList.toggle('open', detVis);
 });
 document.getElementById('add-btn').addEventListener('click', addTask);
 input.addEventListener('keydown', function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); addTask(); } });

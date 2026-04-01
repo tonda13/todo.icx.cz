@@ -7,7 +7,7 @@ todo-pwa/
 ├── index.html      # Shell: <head>, fonty, meta tagy, HTML struktura (127 řádků)
 ├── app.css         # Všechny styly: CSS proměnné, témata, komponenty (181 řádků)
 ├── app.js          # Veškerá logika: data, render, swipe, PTR, animace (221 řádků)
-├── sw.js           # Service Worker: cache (ukoly-1.3.0), offline, CHECK_UPDATE zprávy
+├── sw.js           # Service Worker: cache (ukoly-1.4.0), offline, CHECK_UPDATE zprávy
 ├── manifest.json   # PWA manifest: název, ikony, shortcuts
 ├── CLAUDE.md       # Tento soubor
 ├── icons/

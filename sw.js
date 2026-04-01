@@ -1,4 +1,4 @@
-const CACHE = 'ukoly-1.3.0';
+const CACHE = 'ukoly-1.4.0';
 const ASSETS = ['/index.html', '/manifest.json', '/app.css', '/app.js'];
 
 self.addEventListener('install', e => {
