@@ -1,0 +1,106 @@
+# Úkoly – PWA Todo App
+
+## Struktura projektu
+
+```
+todo-pwa/
+├── index.html      # Shell: <head>, fonty, meta tagy, HTML struktura (127 řádků)
+├── app.css         # Všechny styly: CSS proměnné, témata, komponenty (181 řádků)
+├── app.js          # Veškerá logika: data, render, swipe, PTR, animace (221 řádků)
+├── sw.js           # Service Worker: cache (ukoly-v3), offline, CHECK_UPDATE zprávy
+├── manifest.json   # PWA manifest: název, ikony, shortcuts
+├── CLAUDE.md       # Tento soubor
+└── icons/
+    ├── icon-192.png
+    └── icon-512.png
+```
+
+## Datový model
+
+Úkoly jsou uloženy v `localStorage('tasks')` jako JSON pole objektů:
+```js
+{
+  id: "1234567890",      // Date.now().toString()
+  text: "Název úkolu",
+  detail: "",            // Volitelný detail/poznámka
+  done: false,
+  due: "2025-04-01",     // ISO datum nebo null
+  priority: "mid",       // "low" | "mid" | "high"
+  created: 1234567890    // timestamp
+}
+```
+
+Denní výběr je v `localStorage('daily')`:
+```js
+{
+  date: "2025-03-26",    // TODAY string (ISO)
+  top3: ["id1","id2","id3"],  // max 3 ID
+  no1: "id1"             // ID úkolu číslo jedna
+}
+```
+
+## Klíčové funkce v app.js
+
+| Funkce | Co dělá |
+|--------|---------|
+| `render()` | Volá renderDaily() + renderTasks() |
+| `renderDaily()` | No.1 karta + Top3 chipy nahoře |
+| `renderTasks()` | Seznam ostatních úkolů + initSwipe() |
+| `initSwipe()` | Swipe-left-to-delete na každém .task-wrap |
+| `openEdit(id)` | Otevře edit sheet, readonly trick proti autofocusu |
+| `saveEdit()` | Uloží změny z edit sheetu |
+| `deleteFromEdit()` | Smaže úkol přímo z edit sheetu |
+| `doDelete(id)` | Fyzické smazání + cleanup daily |
+| `toggleWithAnim(el, id)` | Odškrtnutí + animace (3 úrovně) |
+| `animateCompletion(el, id)` | Canvas burst + ripple podle úrovně |
+| `openGuide()` | Otevře denního průvodce (2 kroky) |
+| `confirmGuide()` | Uloží daily výběr |
+| `addTask()` | Přidá nový úkol z formuláře |
+| `priorityScore(t)` | Skóre pro řazení v průvodci (priorita + blízkost termínu) |
+
+## Témata (světlé/tmavé)
+
+Přepínač v headeru, uloženo v `localStorage('theme')`.  
+Respektuje systémové `prefers-color-scheme` jako výchozí.  
+CSS proměnné v `app.css` – sekce `:root, [data-theme="dark"]` a `[data-theme="light"]`.
+
+## Pull-to-refresh
+
+- Touchstart/move/end listenery přímo na `#task-list` (ne document)
+- Práh: 65px vertikálního tahu při `scrollTop === 0`
+- Posílá SW zprávu `CHECK_UPDATE`, SW odpovídá `UPDATE_READY` / `UP_TO_DATE` / `OFFLINE`
+- Při `UPDATE_READY` → `location.reload()` po 1s
+- PTR element: `#ptr-wrap` > `#ptr-pill` (fixed position, slideDown animace)
+
+## Swipe-to-delete
+
+- Struktura: `.task-wrap[data-id]` > `.swipe-bg` + `.task[id="task-row-X"]`
+- Swipe doleva víc než 80px → slide out + `doDelete(id)`
+- Horizontální osa: pokud `|dx| > |dy|` → cancel (aby neinferoval se scrollem)
+- Inicializuje se v `initSwipe()` volaném po každém `renderTasks()`
+
+## Animace dokončení (3 úrovně)
+
+| Úroveň | Podmínka | Efekt |
+|--------|----------|-------|
+| `normal` | Běžný úkol | Zelené ripple + 18 částic |
+| `top3` | V daily.top3 | Dvojité ripple + 40 částic |
+| `no1` | Je daily.no1 | Zlatý burst + 80 částic + flash obrazovky |
+
+## Edit sheet – autofocus prevence
+
+`openEdit()` nastaví `readonly` na textarey před otevřením sheetu.  
+Po 320ms (animace sheetu) odstraní `readonly` – pole jsou tappable ale klávesnice nevyskočí automaticky.
+
+## Hosting
+
+Stačí **statický hosting** (Netlify, Vercel, GitHub Pages).  
+PWA vyžaduje HTTPS nebo localhost pro SW a notifikace.  
+Při deployi aktualizuj verzi cache v `sw.js`: `const CACHE = 'ukoly-vX'`.
+
+## Časté chyby při úpravách
+
+- Při přidání nového souboru ho přidej i do `ASSETS` v `sw.js`
+- Po změně `sw.js` zvedni číslo verze CACHE, jinak se SW neaktualizuje
+- `initSwipe()` se musí volat po každém re-renderu (volá ho `renderTasks()`)
+- `daily.top3` může obsahovat ID smazaných úkolů – vždy filtruj `.filter(Boolean)`

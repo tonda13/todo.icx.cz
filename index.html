@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="cs" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0f" id="theme-meta">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Úkoly">
+<title>Úkoly</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<script src="https://accounts.google.com/gsi/client" async></script>
+</head>
+<body>
+
+<!-- Particle burst canvas + flash overlay -->
+<canvas id="burst-canvas"></canvas>
+<div id="flash"></div>
+
+<!-- Pull-to-refresh indicator (outside #app so it doesn't affect flex layout) -->
+<div id="ptr-wrap">
+  <div id="ptr-pill">
+    <div id="ptr-spinner"></div>
+    <span id="ptr-label">Táhni dolů pro aktualizaci</span>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app">
+
+  <header>
+    <div class="header-top">
+      <span class="logo">Úkoly</span>
+      <div class="header-right">
+        <span class="stats" id="stats">0 zbývá</span>
+        <button class="sync-btn" id="sync-btn" data-state="idle" onclick="handleSyncBtn()" title="Google Drive záloha">
+          <span class="sync-label">drive</span>
+        </button>
+        <button class="theme-toggle" id="theme-toggle">☀</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-filter="all">Vše</button>
+      <button class="tab" data-filter="active">Aktivní</button>
+      <button class="tab" data-filter="done">Hotové</button>
+    </div>
+  </header>
+
+  <div class="add-bar">
+    <textarea id="input" placeholder="Nový úkol…" rows="1"></textarea>
+    <button class="add-btn" id="add-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="add-meta">
+    <input type="date" class="meta-input" id="due-date">
+    <select class="meta-input" id="priority">
+      <option value="low">— nízká</option>
+      <option value="mid" selected>◆ střední</option>
+      <option value="high">▲ vysoká</option>
+    </select>
+  </div>
+
+  <div class="add-extras">
+    <button class="detail-toggle" id="detail-toggle">+ detail</button>
+    <textarea id="detail-input" placeholder="Poznámky, kontext, kroky…"></textarea>
+  </div>
+
+  <div id="install-banner">
+    <span>Nainstaluj appku na plochu</span>
+    <button class="install-btn" id="install-btn">Instalovat</button>
+    <button class="dismiss-btn" id="dismiss-banner">×</button>
+  </div>
+
+  <div id="daily-section"></div>
+  <div class="task-list" id="task-list"></div>
+
+  <div class="bottom-bar">
+    <button class="clear-done" id="clear-done">Smazat hotové</button>
+    <div class="backup-btns">
+      <button class="backup-btn" onclick="exportTasks()" title="Stáhnout zálohu">záloha ↓</button>
+      <button class="backup-btn" onclick="importTasks()" title="Obnovit ze zálohy">obnovit ↑</button>
+    </div>
+    <button class="notif-btn" id="notif-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      Notifikace
+    </button>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- Edit sheet -->
+<div class="sheet-overlay" id="edit-modal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Upravit úkol</div>
+    <div class="sheet-subtitle" id="edit-subtitle"></div>
+    <div class="sheet-body">
+      <div class="edit-field">
+        <div class="edit-label">Název</div>
+        <textarea class="edit-textarea" id="edit-text" rows="2"></textarea>
+      </div>
+      <div class="edit-field">
+        <div class="edit-label">Detail</div>
+        <textarea class="edit-textarea small" id="edit-detail" placeholder="Poznámky, kontext, kroky…"></textarea>
+      </div>
+      <div class="edit-field">
+        <div class="edit-label">Termín a priorita</div>
+        <div class="edit-row">
+          <input type="date" class="edit-date" id="edit-due">
+          <select class="edit-select" id="edit-priority">
+            <option value="low">— nízká</option>
+            <option value="mid">◆ střední</option>
+            <option value="high">▲ vysoká</option>
+          </select>
+        </div>
+      </div>
+      <div class="edit-actions">
+        <button class="btn-secondary" onclick="closeEdit()">Zrušit</button>
+        <button class="btn-primary" onclick="saveEdit()">Uložit</button>
+      </div>
+      <button class="edit-delete" onclick="deleteFromEdit()">Smazat úkol</button>
+    </div>
+  </div>
+</div>
+
+<!-- Daily guide sheet -->
+<div class="sheet-overlay" id="guide-modal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="guide-step active" id="step1">
+      <div class="sheet-title">Denní průvodce</div>
+      <div class="sheet-subtitle" id="guide-date1"></div>
+      <p class="guide-instruction">Vyber 2–3 úkoly, na které se dnes soustředíš.</p>
+      <div class="guide-select-hint">Vybráno: <span id="sel-count">0</span> / 3</div>
+      <div class="guide-tasks" id="guide-task-list"></div>
+      <div class="guide-actions">
+        <button class="btn-secondary" onclick="closeGuide()">Přeskočit</button>
+        <button class="btn-primary" id="step1-next" disabled onclick="goStep2()">Dál →</button>
+      </div>
+    </div>
+    <div class="guide-step" id="step2">
+      <div class="sheet-title">Denní průvodce</div>
+      <div class="sheet-subtitle" id="guide-date2"></div>
+      <p class="guide-instruction">Který z nich je dnes tvoje <strong style="color:var(--gold)">číslo jedna</strong>?</p>
+      <div class="guide-tasks" id="guide-no1-list"></div>
+      <div class="guide-actions">
+        <button class="btn-secondary" onclick="goStep1()">← Zpět</button>
+        <button class="btn-primary" id="step2-confirm" disabled onclick="confirmGuide()">Potvrdit den</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Undo toast -->
+<div id="undo-toast">
+  <span class="undo-msg">Úkol smazán</span>
+  <div class="undo-bar"><div class="undo-bar-fill"></div></div>
+  <button class="undo-btn" onclick="undoDelete()">Zpět</button>
+</div>
+
+<input type="file" id="import-input" accept=".json,application/json" style="display:none">
+<script src="app.js"></script>
+</body>
+</html>
