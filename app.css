@@ -41,14 +41,14 @@
   .add-meta{display:flex;gap:8px;padding:8px 20px 0;flex-shrink:0;flex-wrap:wrap;}
   .meta-input{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;padding:6px 10px;cursor:pointer;transition:border-color 0.15s,color 0.15s;appearance:none;-webkit-appearance:none;}
   .meta-input:focus{outline:none;border-color:var(--accent);color:var(--text);}
-  .date-wrap{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;transition:border-color 0.15s;color:var(--muted);}
+  .date-wrap{display:inline-flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 8px;cursor:pointer;transition:border-color 0.15s;color:var(--muted);}
   .date-wrap:focus-within{border-color:var(--accent);color:var(--text);}
-  .date-wrap input[type="date"]{background:none;border:none;padding:0;color:inherit;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;outline:none;min-width:0;}
+  .date-wrap input[type="date"]{background:none;border:none;padding:0;color:inherit;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;outline:none;min-width:0;max-width:108px;}
   [data-theme="dark"] .date-wrap input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);}
   [data-theme="light"] .date-wrap input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.3);}
   [data-theme="dark"] input[type="date"].meta-input::-webkit-calendar-picker-indicator{filter:invert(0.5);}
   [data-theme="light"] input[type="date"].meta-input::-webkit-calendar-picker-indicator{filter:invert(0.3);}
-  .add-extras{display:flex;flex-direction:column;gap:6px;padding:6px 20px 10px;flex-shrink:0;}
+  .add-extras{display:flex;flex-direction:column;padding:4px 20px 10px;flex-shrink:0;}
   .detail-toggle{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:8px;cursor:pointer;padding:6px 10px;transition:border-color 0.15s,color 0.15s;align-self:flex-start;}
   .detail-toggle:hover{border-color:var(--accent);color:var(--accent-text);}
   .detail-toggle.open{border-color:var(--accent);color:var(--accent-text);}
