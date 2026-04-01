@@ -134,6 +134,7 @@
   #sync-btn[data-state="syncing"] .sync-label{color:var(--accent-text);display:inline-block;animation:drive-spin 1s linear infinite;}
   #notif-btn.enabled .menu-item-label{color:var(--success);}
   #notif-btn.enabled svg{stroke:var(--success);}
+  .menu-version{padding:14px 0 2px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:center;opacity:0.5;}
   /* UNDO TOAST */
   #undo-toast{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 68px);left:50%;transform:translateX(-50%) translateY(20px);z-index:500;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 16px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text);white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.2);opacity:0;pointer-events:none;transition:opacity 0.2s ease,transform 0.2s ease;}
   #undo-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;}

@@ -99,7 +99,9 @@ Po 320ms (animace sheetu) odstraní `readonly` – pole jsou tappable ale kláve
 
 Stačí **statický hosting** (Netlify, Vercel, GitHub Pages).  
 PWA vyžaduje HTTPS nebo localhost pro SW a notifikace.  
-Při deployi aktualizuj verzi cache v `sw.js`: `const CACHE = 'ukoly-X.Y.Z'` (semver).
+Při deployi aktualizuj verzi na **dvou místech** (semver):
+- `sw.js`: `const CACHE = 'ukoly-X.Y.Z'`
+- `app.js`: `var APP_VERSION = 'X.Y.Z'` (zobrazuje se v menu nastavení)
 
 ## Cloudflare Worker – Google Drive OAuth proxy
 

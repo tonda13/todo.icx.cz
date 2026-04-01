@@ -1,3 +1,6 @@
+/* VERSION */
+var APP_VERSION = '1.5.0';
+
 /* DATA */
 var tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
 var daily = JSON.parse(localStorage.getItem('daily') || 'null');
@@ -25,6 +28,7 @@ function applyTheme(t) {
 }
 applyTheme(theme);
 
+document.getElementById('menu-version').textContent = 'v' + APP_VERSION;
 function openMenu() { document.getElementById('menu-modal').classList.add('open'); }
 function closeMenu() { document.getElementById('menu-modal').classList.remove('open'); }
 document.getElementById('menu-modal').addEventListener('click', function(e) { if (e.target === this) closeMenu(); });
