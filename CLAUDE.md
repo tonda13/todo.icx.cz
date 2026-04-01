@@ -7,7 +7,7 @@ todo-pwa/
 ├── index.html      # Shell: <head>, fonty, meta tagy, HTML struktura (127 řádků)
 ├── app.css         # Všechny styly: CSS proměnné, témata, komponenty (181 řádků)
 ├── app.js          # Veškerá logika: data, render, swipe, PTR, animace (221 řádků)
-├── sw.js           # Service Worker: cache (ukoly-1.5.0), offline, CHECK_UPDATE zprávy
+├── sw.js           # Service Worker: cache (ukoly-1.6.0), offline, CHECK_UPDATE zprávy
 ├── manifest.json   # PWA manifest: název, ikony, shortcuts
 ├── CLAUDE.md       # Tento soubor
 ├── icons/
@@ -157,6 +157,21 @@ wrangler tail                          # live logy
 - PKCE verifier ukládat do `localStorage`, ne `sessionStorage` – při OAuth redirectu se může otevřít nový kontext (PWA standalone) kde `sessionStorage` není dostupná
 - Google Cloud Console → Authorized redirect URIs musí mít přesně `https://todo.icx.cz/` (s lomítkem)
 - Po prvním deployi Wrangler interaktivně zaregistruje `workers.dev` subdoménu
+
+## Denní focus – implementované funkce
+
+| Funkce | Popis |
+|--------|-------|
+| Auto-průvodce | Při prvním otevření dne (daily stale + ≥2 aktivní úkoly) se průvodce otevře automaticky po 600ms. Viz `INIT` sekce – `last-guide-prompt` v localStorage brání opakování. |
+| Carry-over No.1 | `openGuide()` detekuje včerejší nedokončené `daily.no1` a zobrazí ho první v seznamu se zvýrazněním (třída `.carry-over`, ikona ↩, label „včera ned.") |
+| Streak | `streakData` v `localStorage('no1-streak')` – `{count, lastDate}`. Aktualizuje se v `toggleWithAnim` při splnění `daily.no1`. Zobrazuje se jako `.streak-badge` v hlavičce denní sekce od count ≥ 2. Platnost se ověřuje při startu – resets pokud lastDate < yesterday. |
+
+## Navrhovaná vylepšení (zbývají)
+
+4. **„Co dál?" po splnění No.1** – toast po odškrtnutí No.1 s nabídkou nastavení nové jedničky
+5. **Přenos Top3 do průvodce** – včerejší nevyřešené top3 jako první kandidáti
+6. **Termíny v průvodci** – datum splatnosti viditelné při výběru (již implementováno v `guide-task-meta`)
+7. **Rychlé přidání z notifikace** – shortcut v manifestu (action: add) pro přímé otevření formuláře
 
 ## Časté chyby při úpravách
 

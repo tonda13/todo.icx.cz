@@ -71,6 +71,10 @@
   .daily-label .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);}
   .guide-btn{font-family:'DM Mono',monospace;font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:4px 10px;cursor:pointer;transition:all 0.15s;}
   .guide-btn:hover{border-color:var(--gold);color:var(--gold);}
+  .streak-badge{font-family:'DM Mono',monospace;font-size:10px;background:var(--gold-dim);color:var(--gold);border:1px solid var(--gold-border);border-radius:4px;padding:1px 6px;margin-left:8px;vertical-align:middle;}
+  .guide-task.carry-over{border-color:var(--accent);background:var(--accent-dim);}
+  .guide-task.carry-over .guide-task-num{color:var(--accent-text);}
+  .carry-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent-text);margin-top:3px;}
   .no1-card{margin:8px 20px 6px;background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:12px;padding:12px 16px;display:flex;align-items:flex-start;gap:12px;}
   .no1-badge{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:var(--gold);background:var(--gold-dim);border-radius:4px;padding:2px 7px;letter-spacing:0.05em;white-space:nowrap;flex-shrink:0;margin-top:2px;border:1px solid var(--gold-border);}
   .no1-text{font-size:15px;font-weight:500;color:var(--text);line-height:1.4;flex:1;cursor:pointer;}

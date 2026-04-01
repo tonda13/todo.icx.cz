@@ -1,5 +1,27 @@
 /* VERSION */
-var APP_VERSION = '1.5.0';
+var APP_VERSION = '1.6.0';
+
+/* STREAK */
+var streakData = JSON.parse(localStorage.getItem('no1-streak') || '{"count":0,"lastDate":null}');
+(function checkStreakValidity() {
+  if (!streakData.count || !streakData.lastDate) return;
+  var yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+  if (streakData.lastDate !== TODAY && streakData.lastDate !== yesterday) {
+    streakData = { count: 0, lastDate: null };
+    localStorage.setItem('no1-streak', JSON.stringify(streakData));
+  }
+})();
+function updateStreak() {
+  if (streakData.lastDate === TODAY) return;
+  var yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+  streakData.count = (streakData.lastDate === yesterday) ? streakData.count + 1 : 1;
+  streakData.lastDate = TODAY;
+  localStorage.setItem('no1-streak', JSON.stringify(streakData));
+}
+function streakBadge() {
+  if (streakData.count < 2) return '';
+  return '<span class="streak-badge">' + streakData.count + '\u00d7</span>';
+}
 
 /* DATA */
 var tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
@@ -196,7 +218,7 @@ function renderDaily() {
     var active = tasks.filter(function(t){ return !t.done; });
     if (active.length >= 2) {
       el.innerHTML = '<div class="daily-header">'
-        + '<span class="daily-label"><span class="dot"></span>Dne\u0161n\u00ed focus</span>'
+        + '<span class="daily-label"><span class="dot"></span>Dne\u0161n\u00ed focus' + streakBadge() + '</span>'
         + '<button class="guide-btn" onclick="openGuide()">Spustit pr\u016fvodce \u2192</button>'
         + '</div>'
         + '<div style="padding:8px 20px 4px;font-size:13px;color:var(--muted)">Je\u0161t\u011b nevybr\u00e1no pro dne\u0161ek</div>'
@@ -209,7 +231,7 @@ function renderDaily() {
   var n1 = tasks.find(function(t){ return t.id === daily.no1; });
   var t3 = daily.top3.map(function(id){ return tasks.find(function(t){ return t.id === id; }); }).filter(Boolean);
   var h = '<div class="daily-header">'
-    + '<span class="daily-label"><span class="dot"></span>Dne\u0161n\u00ed focus</span>'
+    + '<span class="daily-label"><span class="dot"></span>Dne\u0161n\u00ed focus' + streakBadge() + '</span>'
     + '<button class="guide-btn" onclick="openGuide()">Zm\u011bnit</button>'
     + '</div>';
   if (n1) {
@@ -401,6 +423,7 @@ function toggleWithAnim(el, id) {
   var completing = !t.done;
   t.done = completing; save();
   if (completing) {
+    if (isDailyFresh() && daily && daily.no1 === id) updateStreak();
     var e = el || document.getElementById('chk-'+id) || document.getElementById('no1-check-'+id) || document.getElementById('top3-check-'+id);
     if (e) { e.classList.add('done'); animateCompletion(e, id); setTimeout(render, 420); }
     else render();
@@ -553,13 +576,20 @@ function openGuide() {
   var ds = todayStr();
   document.getElementById('guide-date1').textContent = ds;
   document.getElementById('guide-date2').textContent = ds;
+  var carryId = (!isDailyFresh() && daily && daily.no1) ? daily.no1 : null;
+  var carryTask = carryId ? tasks.find(function(t){ return t.id===carryId && !t.done; }) : null;
   var cands = tasks.filter(function(t){ return !t.done; }).sort(function(a,b){ return priorityScore(b)-priorityScore(a); }).slice(0,10);
+  if (carryTask && cands[0] && cands[0].id !== carryTask.id) {
+    cands = [carryTask].concat(cands.filter(function(t){ return t.id !== carryTask.id; })).slice(0,10);
+  }
   document.getElementById('guide-task-list').innerHTML = cands.map(function(t){
     var di = formatDate(t.due);
-    return '<div class="guide-task" data-id="' + t.id + '" onclick="toggleGuideSelect(\'' + t.id + '\')">'
-      + '<span class="guide-task-num">#</span>'
+    var carry = carryTask && t.id === carryTask.id;
+    return '<div class="guide-task' + (carry ? ' carry-over' : '') + '" data-id="' + t.id + '" onclick="toggleGuideSelect(\'' + t.id + '\')">'
+      + '<span class="guide-task-num">' + (carry ? '\u21a9' : '#') + '</span>'
       + '<div><div class="guide-task-text">' + escHtml(t.text) + '</div>'
-      + '<div class="guide-task-meta">' + pL[t.priority||'mid'] + (di ? ' \u00b7 '+di.label : '') + '</div></div></div>';
+      + (carry ? '<div class="carry-label">v\u010dera ned. \u00b7 ' + pL[t.priority||'mid'] + (di ? ' \u00b7 '+di.label : '') + '</div>' : '<div class="guide-task-meta">' + pL[t.priority||'mid'] + (di ? ' \u00b7 '+di.label : '') + '</div>')
+      + '</div></div>';
   }).join('');
   goStep1(); document.getElementById('guide-modal').classList.add('open');
 }
