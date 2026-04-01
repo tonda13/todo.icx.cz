@@ -218,12 +218,13 @@ function renderDaily() {
   }
   var oth = t3.filter(function(t){ return t.id !== daily.no1; });
   if (oth.length) {
-    h += '<div class="top3-row">' + oth.map(function(t, i) {
-      return '<div class="top3-chip' + (t.done ? ' done' : '') + '">'
-        + '<span class="chip-num" onclick="toggleWithAnim(null,\'' + t.id + '\')">' + (i+2) + '.</span>'
-        + '<span style="overflow:hidden;text-overflow:ellipsis" onclick="openEdit(\'' + t.id + '\')">' + escHtml(t.text) + '</span>'
+    h += oth.map(function(t, i) {
+      return '<div class="top3-card' + (t.done ? ' done' : '') + '">'
+        + '<span class="top3-num">' + (i+2) + '.</span>'
+        + '<span class="top3-card-text" onclick="openEdit(\'' + t.id + '\')">' + escHtml(t.text) + '</span>'
+        + '<button class="top3-check' + (t.done ? ' done' : '') + '" id="top3-check-' + t.id + '" onclick="toggleWithAnim(this,\'' + t.id + '\')">' + chkSvg + '</button>'
         + '</div>';
-    }).join('') + '</div>';
+    }).join('');
   }
   h += '<div class="section-divider"><span>Ostatn\u00ed \u00FAkoly</span></div>';
   el.innerHTML = h;
@@ -396,7 +397,7 @@ function toggleWithAnim(el, id) {
   var completing = !t.done;
   t.done = completing; save();
   if (completing) {
-    var e = el || document.getElementById('chk-'+id) || document.getElementById('no1-check-'+id);
+    var e = el || document.getElementById('chk-'+id) || document.getElementById('no1-check-'+id) || document.getElementById('top3-check-'+id);
     if (e) { e.classList.add('done'); animateCompletion(e, id); setTimeout(render, 420); }
     else render();
   } else render();
