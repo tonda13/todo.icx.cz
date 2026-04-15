@@ -7,7 +7,7 @@ todo-pwa/
 ├── index.html      # Shell: <head>, fonty, meta tagy, HTML struktura (127 řádků)
 ├── app.css         # Všechny styly: CSS proměnné, témata, komponenty (181 řádků)
 ├── app.js          # Veškerá logika: data, render, swipe, PTR, animace (221 řádků)
-├── sw.js           # Service Worker: cache (ukoly-1.6.0), offline, CHECK_UPDATE zprávy
+├── sw.js           # Service Worker: cache (ukoly-1.7.1), offline, CHECK_UPDATE zprávy
 ├── manifest.json   # PWA manifest: název, ikony, shortcuts
 ├── CLAUDE.md       # Tento soubor
 ├── icons/
@@ -62,6 +62,8 @@ Denní výběr je v `localStorage('daily')`:
 | `priorityScore(t)` | Skóre pro řazení v průvodci (priorita + blízkost termínu) |
 | `openMenu()` / `closeMenu()` | Otevře/zavře nastavení sheet |
 | `applyTheme(t)` | Přepne téma, aktualizuje `#theme-icon` a meta tag |
+| `renderMarkdown(s)` | Renderuje detail jako markdown (tučné, kurzíva, přeškrtnuté, ul, ol) |
+| `inlineMarkdown(s)` | Inline transformace: `**`, `*`, `_`, `~~` → HTML tagy |
 
 ## UI layout
 
@@ -182,3 +184,5 @@ wrangler tail                          # live logy
 - `toggleWithAnim(el, id)` – `el` je přímo button element (ne null), aby animace fungovaly
 - Téma se ovládá přes `applyTheme()`, ne přímou manipulací s `#theme-toggle` (ten neexistuje)
 - `#menu-version` se plní z `APP_VERSION` v app.js – neupravovat v HTML
+- `renderMarkdown()` nejprve escapuje HTML přes `escHtml()`, pak teprve aplikuje markdown – tento pořadí je klíčové pro XSS bezpečnost; nikdy neobrátit
+- Markdown se renderuje jen v **zobrazení** detailu (`.task-detail`), textarea v edit sheetu zobrazuje surový text

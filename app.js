@@ -1,5 +1,5 @@
 /* VERSION */
-var APP_VERSION = '1.6.0';
+var APP_VERSION = '1.7.1';
 
 /* STREAK */
 var streakData = JSON.parse(localStorage.getItem('no1-streak') || '{"count":0,"lastDate":null}');
@@ -53,6 +53,27 @@ applyTheme(theme);
 document.getElementById('menu-version').textContent = 'v' + APP_VERSION;
 function openMenu() { document.getElementById('menu-modal').classList.add('open'); }
 function closeMenu() { document.getElementById('menu-modal').classList.remove('open'); }
+function reloadApp() {
+  if (!navigator.onLine) {
+    var btn = document.getElementById('reload-btn');
+    var lbl = btn.querySelector('.menu-item-label');
+    lbl.textContent = 'Bez připojení';
+    setTimeout(function(){ lbl.textContent = 'Obnovit'; }, 2000);
+    return;
+  }
+  closeMenu();
+  (async function() {
+    if ('serviceWorker' in navigator) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(function(r){ return r.unregister(); }));
+    }
+    if ('caches' in window) {
+      var keys = await caches.keys();
+      await Promise.all(keys.map(function(k){ return caches.delete(k); }));
+    }
+    location.reload();
+  })();
+}
 document.getElementById('menu-modal').addEventListener('click', function(e) { if (e.target === this) closeMenu(); });
 
 /* PULL TO REFRESH */
@@ -204,6 +225,38 @@ function priorityScore(t) {
 }
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function q(s) { return s.replace(/'/g, "\\'"); }
+function renderMarkdown(s) {
+  var lines = escHtml(s).split('\n');
+  var out = [];
+  var inUl = false, inOl = false;
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i];
+    var ulM = l.match(/^(\s*)[-*]\s+(.*)$/);
+    var olM = l.match(/^(\s*)\d+\.\s+(.*)$/);
+    if (ulM) {
+      if (!inUl) { if (inOl) { out.push('</ol>'); inOl=false; } out.push('<ul>'); inUl=true; }
+      out.push('<li>' + inlineMarkdown(ulM[2]) + '</li>');
+    } else if (olM) {
+      if (!inOl) { if (inUl) { out.push('</ul>'); inUl=false; } out.push('<ol>'); inOl=true; }
+      out.push('<li>' + inlineMarkdown(olM[2]) + '</li>');
+    } else {
+      if (inUl) { out.push('</ul>'); inUl=false; }
+      if (inOl) { out.push('</ol>'); inOl=false; }
+      if (l.trim() === '') { out.push('<br>'); } else { out.push('<span>' + inlineMarkdown(l) + '</span><br>'); }
+    }
+  }
+  if (inUl) out.push('</ul>');
+  if (inOl) out.push('</ol>');
+  return out.join('');
+}
+function inlineMarkdown(s) {
+  return s
+    .replace(/~~(.+?)~~/g, '<del>$1</del>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.+?)__/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+?)\*/g, '<em>$1</em>')
+    .replace(/_([^_]+?)_/g, '<em>$1</em>');
+}
 
 var pL = {high:'vysok\u00e1', mid:'st\u0159edn\u00ed', low:'n\u00edzk\u00e1'};
 var pC = {high:'p-high', mid:'p-mid', low:'p-low'};
@@ -279,7 +332,7 @@ function renderTasks() {
         + '<button class="task-check" id="chk-' + t.id + '" onclick="toggleWithAnim(this,\'' + t.id + '\')">' + chkSvg + '</button>'
         + '<div class="task-body" onclick="openEdit(\'' + t.id + '\')">'
           + '<div class="task-text">' + escHtml(t.text) + '</div>'
-          + (t.detail ? '<div class="task-detail">' + escHtml(t.detail) + '</div>' : '')
+          + (t.detail ? '<div class="task-detail">' + renderMarkdown(t.detail) + '</div>' : '')
           + '<div class="task-meta">'
             + (di ? '<span class="task-date ' + di.cls + '">' + di.label + '</span>' : '')
             + '<span class="priority-badge ' + pC[t.priority||'mid'] + '">' + pL[t.priority||'mid'] + '</span>'

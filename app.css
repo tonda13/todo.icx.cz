@@ -112,6 +112,9 @@
   .task-text{font-size:15px;color:var(--text);line-height:1.4;word-break:break-word;transition:color 0.15s;}
   .task.done .task-text{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--border);}
   .task-detail{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5;word-break:break-word;}
+  .task-detail ul,.task-detail ol{margin:2px 0 2px 16px;padding:0;}
+  .task-detail li{margin:1px 0;}
+  .task-detail br:last-child{display:none;}
   .task-meta{display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;}
   .task-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
   .task-date.overdue{color:var(--danger);}
